@@ -55,5 +55,42 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
 
 % put your code here
 
+% ---------------------------- EMIEL'S CODE ----------------------------------
+    M = mazeSize(2); % maze height
+    N = mazeSize(1); % maze width
+    numberOfCells = M*N; % obvious variable to improve code readability
+    numberOfInputs = 17; % number of theoretically possible control inputs
+    
+    % Establish control space 
+    controlSpace = [];
+    for i=-1:1
+       for j=-1:1
+           if (j ~= 0 || i ~= 0)
+               controlSpace(end+1, :) = [i, j]; 
+           end
+       end
+    end
+    controlSpace = [controlSpace; 2*controlSpace; [0 0]];
+
+    % Initialize probability matrix
+    P = zeros(numberOfCells, numberOfCells, numberOfInputs);
+        % P(i, j, u):
+        %   i = initial state
+        %   j = final state
+        %   u = applied control input
+        
+    for cell = 1:numberOfCells 
+        % Determine possible control inputs
+        allowedControls = controlSpace;
+        for u=1:numberOfInputs
+            if u(1) == 0 || u(2) == 0 % straight movement
+
+            end
+              
+        end
+    end
+   
+    
+
 end
 
