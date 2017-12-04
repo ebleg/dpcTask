@@ -62,15 +62,15 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
     numberOfInputs = 17; % number of theoretically possible control inputs
     
     % Establish control space 
-    controlSpace = [];
-    for i=-1:1
-       for j=-1:1
-           if (j ~= 0 || i ~= 0)
-               controlSpace(end+1, :) = [i, j]; 
-           end
-       end
-    end
-    controlSpace = [controlSpace; 2*controlSpace; [0 0]];
+%    controlSpace = [];
+%    for i=-1:1
+%       for j=-1:1
+%           if (j ~= 0 || i ~= 0)
+%               controlSpace(end+1, :) = [i, j]; 
+%           end
+%       end
+%    end
+%    controlSpace = [controlSpace; 2*controlSpace; [0 0]];
 
     % Initialize probability matrix
     P = zeros(numberOfCells, numberOfCells, numberOfInputs);
@@ -135,6 +135,7 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
         % determined allowed controls
         % -------------------------------------------------------------------------
 
+        % 'Execute' control policy
         for uID = 1:size(allowedControls, 1)
             u = allowedControls(uID, :);
             target = [m+u(1), n+u(2)];
@@ -149,16 +150,26 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
             
             % check for holes along the way
             for holeID = 1:size(holes, 1) 
+                holeFactor = 1; % takes into account the future probabilities that assume the ball did not fall 
+                                % in the hole
                 hole = holes(holeID, :);     
                 for trajectCellID  = 1:size(trajectCells, 1) 
                     if hole == trajectCells(trajectCellID, :)
-                        P(n*M+m, resetCell(2)*M + resetCell(1), (find(controlSpace == u))) = ...
-                            P(n*M+m, resetCell(2)*M + resetCell(1), (find(controlSpace == u))) + p_f;
-                    end
-                end
-            end
+                        % Update P - looks complicated but really isn't
+                        P(n*M+m, ... % original cell 
+                          resetCell(2)*M + resetCell(1), ... 
+                          find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) = ... 
+                            P(n*M+m, ...
+                              resetCell(2)*M + resetCell(1), ...
+                              find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) + p_f;
+                        holeFactor = (1-p_f)*holeFactor; 
+                    end % end of hole check
+                end % end of for through traject
+            end % end of for through holes
+
+
             
-        end
+        end % end of of for through allowed policies
 
     end % end of for cells
    
