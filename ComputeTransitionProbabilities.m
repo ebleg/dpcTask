@@ -56,21 +56,11 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
 % put your code here
 
 % ---------------------------- EMIEL'S CODE ----------------------------------
+
     M = mazeSize(2); % maze height
     N = mazeSize(1); % maze width
     numberOfCells = M*N; % obvious variable to improve code readability
     numberOfInputs = 17; % number of theoretically possible control inputs
-    
-    % Establish control space 
-%    controlSpace = [];
-%    for i=-1:1
-%       for j=-1:1
-%           if (j ~= 0 || i ~= 0)
-%               controlSpace(end+1, :) = [i, j]; 
-%           end
-%       end
-%    end
-%    controlSpace = [controlSpace; 2*controlSpace; [0 0]];
 
     % Initialize probability matrix
     P = zeros(numberOfCells, numberOfCells, numberOfInputs);
@@ -78,7 +68,14 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
         %   i = initial state
         %   j = final state
         %   u = applied control input
-        
+    
+    disturbanceSpace = [];
+    for i=-1:1 
+        for j=-1:1
+            disturbanceSpace(end+1, :) = [i, j];
+        end
+    end
+
     for cell = 1:numberOfCells 
         % Determine n and k for this cell (CHECK!)
         n = ceil(cell/M); % ceil(.): round to the next integer (1-based indexing)
@@ -122,6 +119,16 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
             if wallInit(2) == m-1 && wallEnd(2) == m && wallEnd(1) == n-2 
                 allowedControls(find((allowedControls(:, 2) < -1) & (allowedControls(:, 1) == 0)), :) = [];, end
 
+            % Close walls with corners?
+            if ((wallInit(2) == m && wallInit(1) == n-1) || (wallEnd(2) == m && wallEnd(1) == n-1))
+                allowedControls(find((allowedControls(:,1) == 1) & (allowedControls(:,2) == -1)), :) = [];, end
+            if ((wallInit(2) == m && wallInit(1) == n) || (wallEnd(2) == m && wallEnd(1) == n))
+                allowedControls(find((allowedControls(:,1) == 1) & (allowedControls(:,2) == 1)), :) = [];, end
+            if ((wallInit(2) == m-1 && wallInit(1) == n-1) || (wallEnd(2) == m-1 && wallEnd(1) == n-1))
+                allowedControls(find((allowedControls(:,1) == -1) & (allowedControls(:,2) == -1)), :) = [];, end
+            if ((wallInit(2) == m-1 && wallInit(1) == n) || (wallEnd(2) == m-1 && wallEnd(1) == n))
+                allowedControls(find((allowedControls(:,1) == -1) & (allowedControls(:,2) == 1)), :) = [];, end
+
             % Check for distant wall corners
             if ((wallInit(2) == m+1 && wallInit(1) == n-2) || (wallEnd(2) == m+1 && wallEnd(1) == n-2))
                 allowedControls(find((allowedControls(:,1) == 2) & (allowedControls(:,2) == -2)), :) = [];, end
@@ -152,7 +159,7 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
             for holeID = 1:size(holes, 1) 
                 holeFactor = 1; % takes into account the future probabilities that assume the ball did not fall 
                                 % in the hole
-                hole = holes(holeID, :);     
+                hole = fliplr(holes(holeID, :));
                 for trajectCellID  = 1:size(trajectCells, 1) 
                     if hole == trajectCells(trajectCellID, :)
                         % Update P - looks complicated but really isn't
@@ -166,9 +173,58 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
                     end % end of hole check
                 end % end of for through traject
             end % end of for through holes
-
-
             
+            bounce = 0;
+            for wID = 1:size(disturbanceSpace, 1)
+                w = disturbanceSpace(wID, :);
+                % Check for boundaries
+                if target(1) == 1
+                    if w(1) < 0 bounce = 1;, end
+                end
+                if target(1) == M-1
+                    if w(1) > 0 bounce = 1;, end
+                end
+                if target(2) == 1
+                    if w(2) < 0 bounce = 1;, end
+                end
+                if target(2) == N-1 
+                    if w(2) > 0 bounce = 1;, end
+                end
+
+                % Check for walls
+                for wallID = 1:2:size(walls, 1)
+                    wallInit = walls(wallID, :);
+                    wallEnd = walls(wallID+1, :);
+                    wallCenter = wallInit + 0.5*(wallEnd - wallInit);
+                    wallCenter = fliplr(wallCenter);  
+                    disturbanceCenter = target - [0.5 0.5] + 0.5*w;
+
+                    % Check for straight walls
+                    if wallCenter == disturbanceCenter
+                        bounce = 1; 
+                    end
+
+                    % Check for cornering walls
+                    if disturbanceCenter == fliplr(wallInit) | disturbanceCenter == fliplr(wallEnd);
+                        bounce = 1;
+                    end
+                    
+                    % Determine the final cell
+                    if bounce == 1
+                        final = target;
+                    else if bounce == 0;
+                        final = target + w;
+                    else 
+                        disp('error, something went wrong');
+                    end
+
+                    % Is there a hole in the final cell
+                    for holeID = 1:size(holes, 1)
+                        hole = fliplr(holes(holeID, :);
+                        if hole == 
+                    end
+                
+                end % end of for through walls
         end % end of of for through allowed policies
 
     end % end of for cells
