@@ -75,6 +75,7 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
             disturbanceSpace(end+1, :) = [i, j];
         end
     end
+    p_d = 1/size(disturbanceSpace, 1); 
 
     for cell = 1:numberOfCells 
         % Determine n and k for this cell (CHECK!)
@@ -119,15 +120,22 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
             if wallInit(2) == m-1 && wallEnd(2) == m && wallEnd(1) == n-2 
                 allowedControls(find((allowedControls(:, 2) < -1) & (allowedControls(:, 1) == 0)), :) = [];, end
 
-            % Close walls with corners?
+            % Close walls with corners? 
             if ((wallInit(2) == m && wallInit(1) == n-1) || (wallEnd(2) == m && wallEnd(1) == n-1))
                 allowedControls(find((allowedControls(:,1) == 1) & (allowedControls(:,2) == -1)), :) = [];, end
+                allowedControls(find((allowedControls(:,1) == 2) & (allowedControls(:,2) == -2)), :) = [];
+
             if ((wallInit(2) == m && wallInit(1) == n) || (wallEnd(2) == m && wallEnd(1) == n))
                 allowedControls(find((allowedControls(:,1) == 1) & (allowedControls(:,2) == 1)), :) = [];, end
+                allowedControls(find((allowedControls(:,1) == 2) & (allowedControls(:,2) == 2)), :) = [];
+
             if ((wallInit(2) == m-1 && wallInit(1) == n-1) || (wallEnd(2) == m-1 && wallEnd(1) == n-1))
                 allowedControls(find((allowedControls(:,1) == -1) & (allowedControls(:,2) == -1)), :) = [];, end
+                allowedControls(find((allowedControls(:,1) == -2) & (allowedControls(:,2) == -2)), :) = [];
+
             if ((wallInit(2) == m-1 && wallInit(1) == n) || (wallEnd(2) == m-1 && wallEnd(1) == n))
                 allowedControls(find((allowedControls(:,1) == -1) & (allowedControls(:,2) == 1)), :) = [];, end
+                allowedControls(find((allowedControls(:,1) == -2) & (allowedControls(:,2) == 2)), :) = [];
 
             % Check for distant wall corners
             if ((wallInit(2) == m+1 && wallInit(1) == n-2) || (wallEnd(2) == m+1 && wallEnd(1) == n-2))
@@ -151,24 +159,26 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
 
             % determine cells in between
             trajectCells = [];
+
             trajectCells(1, :) = target;
             if u(1) > 1 || u(2) > 1 
-                trajectCells(2, :) = [m + floor(mTarget-m)/2, n + floor(nTarget-n)/2];, end
+                trajectCells(2, :) = [m + floor(0.5*(mTarget-m)), n + floor(0.5*(nTarget-n))];, end
+
+            holeFactor = 1; % takes into account the future probabilities that assume the ball did not fall 
+                            % in the hole
             
             % check for holes along the way
             for holeID = 1:size(holes, 1) 
-                holeFactor = 1; % takes into account the future probabilities that assume the ball did not fall 
-                                % in the hole
                 hole = fliplr(holes(holeID, :));
                 for trajectCellID  = 1:size(trajectCells, 1) 
-                    if hole == trajectCells(trajectCellID, :)
+                    if (hole == trajectCells(trajectCellID, :) & u ~= [0 0])
                         % Update P - looks complicated but really isn't
-                        P(n*M+m, ... % original cell 
-                          resetCell(2)*M + resetCell(1), ... 
+                        P(cell, ... % original cell 
+                          (resetCell(1)-1)*M + resetCell(2), ... 
                           find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) = ... 
-                            P(n*M+m, ...
-                              resetCell(2)*M + resetCell(1), ...
-                              find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) + p_f;
+                            P((n-1)*M+m, ...
+                              (resetCell(1)-1)*M + resetCell(2), ...
+                              find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) + holeFactor*p_f;
                         holeFactor = (1-p_f)*holeFactor; 
                     end % end of hole check
                 end % end of for through traject
@@ -181,13 +191,13 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
                 if target(1) == 1
                     if w(1) < 0 bounce = 1;, end
                 end
-                if target(1) == M-1
+                if target(1) == M
                     if w(1) > 0 bounce = 1;, end
                 end
                 if target(2) == 1
                     if w(2) < 0 bounce = 1;, end
                 end
-                if target(2) == N-1 
+                if target(2) == N 
                     if w(2) > 0 bounce = 1;, end
                 end
 
@@ -212,24 +222,57 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
                     % Determine the final cell
                     if bounce == 1
                         final = target;
-                    else if bounce == 0;
+                    elseif bounce == 0;
                         final = target + w;
                     else 
                         disp('error, something went wrong');
                     end
 
                     % Is there a hole in the final cell
+                    finalHole = 0; % 0 if no final hole, 1 if there is, initialize with 0
                     for holeID = 1:size(holes, 1)
-                        hole = fliplr(holes(holeID, :);
-                        if hole == 
+                        hole = fliplr(holes(holeID, :));
+                        if hole == final finalHole = 1;
+                        end
                     end
-                
                 end % end of for through walls
+
+                mFinal = final(1);
+                nFinal = final(2);
+                
+                if finalHole == 1            
+                    P(cell, ... % original cell 
+                      (resetCell(1)-1)*M + resetCell(2), ... 
+                      find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) = ... 
+                        P((n-1)*M+m, ...
+                          (resetCell(1)-1)*M + resetCell(2), ...
+                          find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) + p_f*holeFactor*p_d;
+                    holeFactor = holeFactor*(1-p_f);
+                elseif finalHole == 0
+                    P(cell, ... % original cell 
+                      (nFinal-1)*M + mFinal(1), ... 
+                      find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) = ... 
+                        P(cell, ...
+                          (nFinal-1)*M + mFinal, ...
+                          find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) + holeFactor*p_d;
+                end
+
         end % end of of for through allowed policies
 
     end % end of for cells
-   
-    
 
+finalCellIndex = (targetCell(1)-1)*M + targetCell(2);
+
+for nextCell = 1:numberOfCells 
+   for controlInput = 1:numberOfInputs
+       if nextCell == finalCellIndex 
+           P(finalCellIndex, nextCell, controlInput) = 1;
+       else
+           P(finalCellIndex, nextCell, controlInput) = 0;
+       end
+   end
+end   
+
+% ------------------------------------- EO EMIEL'S CODE -----------------------------------------
 end % end of function
 
