@@ -80,17 +80,89 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
         %   u = applied control input
         
     for cell = 1:numberOfCells 
-        % Determine possible control inputs
-        allowedControls = controlSpace;
-        for u=1:numberOfInputs
-            if u(1) == 0 || u(2) == 0 % straight movement
+        % Determine n and k for this cell (CHECK!)
+        n = ceil(cell/M); % ceil(.): round to the next integer (1-based indexing)
+        m = cell - (n-1)*M; % the only reason why this is complicated is because 1-based indexing is stupid
 
+        % -------------------------------------------------------------------------
+        %% Determine possible control inputs (this is not the most efficient way...)
+
+        allowedControls = controlSpace;
+        
+        % WARNING: THE FOLLOWING ALGORITHM WORKS BUT IS TERRIBLY COMPLEX
+        % (I am developing a better one)
+        % Check for boundaries 
+        if m <= 2 allowedControls(find(allowedControls(:, 1) < -(m-1)), :) = [];, end
+        if M-m <= 2  allowedControls(find(allowedControls(:, 1) > M-m), :) = [];, end
+        if n <= 2 allowedControls(find(allowedControls(:, 2) < -(n-1)), :) = [];, end
+        if N-n <= 2  allowedControls(find(allowedControls(:, 2) > N-n), :) = [];, end
+
+        % Check for walls
+        for wallID = 1:2:size(walls, 1)
+            wallInit = walls(wallID, :);
+            wallEnd = walls(wallID+1, :);
+
+            % Check for immediate walls (for straight movements)
+            if wallInit(1) == n-1 && wallEnd(1) == n && wallEnd(2) == m
+                allowedControls(find(allowedControls(:, 1) > 0), :) = [];, end
+            if wallInit(1) == n-1 && wallEnd(1) == n && wallEnd(2) == m-1
+                allowedControls(find(allowedControls(:, 1) < 0), :) = [];, end
+            if wallInit(2) == m-1 && wallEnd(2) == m && wallEnd(1) == n 
+                allowedControls(find(allowedControls(:, 2) > 0), :) = [];, end
+            if wallInit(2) == m-1 && wallEnd(2) == m && wallEnd(1) == n-1 
+                allowedControls(find(allowedControls(:, 2) < 0), :) = [];, end
+
+            % Check for straight walls at a distance
+            if wallInit(1) == n-1 && wallEnd(1) == n && wallEnd(2) == m+1
+                allowedControls(find((allowedControls(:, 1) > 1) & (allowedControls(:, 2) == 0)), :) = [];, end
+            if wallInit(1) == n-1 && wallEnd(1) == n && wallEnd(2) == m-2
+                allowedControls(find((allowedControls(:, 1) < -1) & (allowedControls(:, 2) == 0)), :) = [];, end
+            if wallInit(2) == m-1 && wallEnd(2) == m && wallEnd(1) == n+1 
+                allowedControls(find((allowedControls(:, 2) > 1) & (allowedControls(:, 1) == 0)), :) = [];, end
+            if wallInit(2) == m-1 && wallEnd(2) == m && wallEnd(1) == n-2 
+                allowedControls(find((allowedControls(:, 2) < -1) & (allowedControls(:, 1) == 0)), :) = [];, end
+
+            % Check for distant wall corners
+            if ((wallInit(2) == m+1 && wallInit(1) == n-2) || (wallEnd(2) == m+1 && wallEnd(1) == n-2))
+                allowedControls(find((allowedControls(:,1) == 2) & (allowedControls(:,2) == -2)), :) = [];, end
+            if ((wallInit(2) == m+1 && wallInit(1) == n+1) || (wallEnd(2) == m+1 && wallEnd(1) == n+1))
+                allowedControls(find((allowedControls(:,1) == 2) & (allowedControls(:,2) == 2)), :) = [];, end
+            if ((wallInit(2) == m-2 && wallInit(1) == n-2) || (wallEnd(2) == m-2 && wallEnd(1) == n-2))
+                allowedControls(find((allowedControls(:,1) == -2) & (allowedControls(:,2) == -2)), :) = [];, end
+            if ((wallInit(2) == m-2 && wallInit(1) == n+1) || (wallEnd(2) == m-2 && wallEnd(1) == n+1))
+                allowedControls(find((allowedControls(:,1) == -2) & (allowedControls(:,2) == 2)), :) = [];, end
+        end % end of for walls
+        % determined allowed controls
+        % -------------------------------------------------------------------------
+
+        for uID = 1:size(allowedControls, 1)
+            u = allowedControls(uID, :);
+            target = [m+u(1), n+u(2)];
+            mTarget = target(1);
+            nTarget = target(2);
+
+            % determine cells in between
+            trajectCells = [];
+            trajectCells(1, :) = target;
+            if u(1) > 1 || u(2) > 1 
+                trajectCells(2, :) = [m + floor(mTarget-m)/2, n + floor(nTarget-n)/2];, end
+            
+            % check for holes along the way
+            for holeID = 1:size(holes, 1) 
+                hole = holes(holeID, :);     
+                for trajectCellID  = 1:size(trajectCells, 1) 
+                    if hole == trajectCells(trajectCellID, :)
+                        P(n*M+m, resetCell(2)*M + resetCell(1), (find(controlSpace == u))) = ...
+                            P(n*M+m, resetCell(2)*M + resetCell(1), (find(controlSpace == u))) + p_f;
+                    end
+                end
             end
-              
+            
         end
-    end
+
+    end % end of for cells
    
     
 
-end
+end % end of function
 
