@@ -59,6 +59,20 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
 %           control input l.
 
 % put your code here
+    
+    M = mazeSize(2); % maze height
+    N = mazeSize(1); % maze width
+    numberOfCells = M*N; % obvious variable to improve code readability
+    numberOfInputs = 17; % number of theoretically possible control inputs
+    
+    for cell = 1:numberOfCells
+        for u = 1:numberOfInputs
+            G = 1;
+            % Check for walls
+            
+        end
+    end
+
 
 end
 

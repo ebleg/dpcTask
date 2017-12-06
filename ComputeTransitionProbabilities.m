@@ -60,7 +60,10 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
     M = mazeSize(2); % maze height
     N = mazeSize(1); % maze width
     numberOfCells = M*N; % obvious variable to improve code readability
-    numberOfInputs = 17; % number of theoretically possible control inputs
+    numberOfInputs = size(controlSpace, 1); % number of theoretically possible control inputs
+
+    resetCellID = (resetCell(1)-1)*M + resetCell(2);
+    terminalStateID = (targetCell(1)-1)*M + targetCell(2); % what the TA's call target cell
 
     % Initialize probability matrix
     P = zeros(numberOfCells, numberOfCells, numberOfInputs);
@@ -82,197 +85,160 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
         n = ceil(cell/M); % ceil(.): round to the next integer (1-based indexing)
         m = cell - (n-1)*M; % the only reason why this is complicated is because 1-based indexing is stupid
 
-        % -------------------------------------------------------------------------
-        %% Determine possible control inputs (this is not the most efficient way...)
+        cellCenter = [n m] - 0.5;
+        allowedControls = controlSpace; % start with empty 'allowedControls'
 
-        allowedControls = controlSpace;
-        
-        % WARNING: THE FOLLOWING ALGORITHM WORKS BUT IS TERRIBLY COMPLEX
-        % (I am developing a better one)
-        % Check for boundaries 
-        if m <= 2 allowedControls(find(allowedControls(:, 1) < -(m-1)), :) = [];, end
-        if M-m <= 2  allowedControls(find(allowedControls(:, 1) > M-m), :) = [];, end
-        if n <= 2 allowedControls(find(allowedControls(:, 2) < -(n-1)), :) = [];, end
-        if N-n <= 2  allowedControls(find(allowedControls(:, 2) > N-n), :) = [];, end
+        %% WALL CHECKING FOR ALLOWED CONTROLS
+        for wallID = 1:2:size(walls, 1); % Loop through all the walls       
+            wallInit = walls(wallID, :); % First wall corner 
+            wallEnd = walls(wallID+1, :);  % Second wall corner
+            wallCenter = wallInit + 0.5*(wallEnd - wallInit); % Center of the wall
+            wallCorners = [wallInit; wallEnd]; % Vector with the two corners
 
-        % Check for walls
-        for wallID = 1:2:size(walls, 1)
-            wallInit = walls(wallID, :);
-            wallEnd = walls(wallID+1, :);
+            % The algorithm evaluates each input step by step (steps of half a cell) and checks for each step whether a 
+            % collison with a wall happens. 
+            for uID = 1:numberOfInputs % loop through all the inputs
+                u = controlSpace(uID, :); % u is the current input we're testing
+                inputStep = sign(u).*min(0.5, abs(u)); % Defines the intermediate steps for the input evaluation
+                                                       % Input is evaluated with steps of 0.5 or -0.5 in case the input
+                                                       % the input is negative. 
+                                                       % e.g. u = [-1 0] --> inputStep = [-0.5 0]
+                                                       % e.g. u = [0 2] --> inputStep = [0 0.5]
+                                                       % e.g. u = [-2 2] --> inputStep = [-0.5 0.5]
+                                                       % e.g. u = [0 0] --> inputStep = [0 0]
+                collision = 0; % 1 if a collison happend
+                evalInput = inputStep; % evalInput = intermediate input to be tested
+                inputDone = 0;  % did we evaluate the full input?
+                while ~inputDone && ~collision  
+                    evalInputIntersect = cellCenter + evalInput;
+                    if evalInputIntersect == wallCenter ... % collision with wall center (straight movement)
+                      | ismember(evalInputIntersect, wallCorners, 'rows') ... % collision with corners (diagonal movement)
+                      | any(evalInputIntersect == 0) ... % boundaries left and bottom
+                      | any(evalInputIntersect == [N, M]) % boundaries right and top
 
-            % Check for immediate walls (for straight movements)
-            if wallInit(1) == n-1 && wallEnd(1) == n && wallEnd(2) == m
-                allowedControls(find(allowedControls(:, 1) > 0), :) = [];, end
-            if wallInit(1) == n-1 && wallEnd(1) == n && wallEnd(2) == m-1
-                allowedControls(find(allowedControls(:, 1) < 0), :) = [];, end
-            if wallInit(2) == m-1 && wallEnd(2) == m && wallEnd(1) == n 
-                allowedControls(find(allowedControls(:, 2) > 0), :) = [];, end
-            if wallInit(2) == m-1 && wallEnd(2) == m && wallEnd(1) == n-1 
-                allowedControls(find(allowedControls(:, 2) < 0), :) = [];, end
+                        allowedControls(allowedControls(:,1) == u(1) & allowedControls(:,2) == u(2), :) = []; 
+                            % remove control input from allowedControls space
+                        collision = 1; % we don't have to evaluate the current input anymore, it already failed
+                    end
 
-            % Check for straight walls at a distance
-            if wallInit(1) == n-1 && wallEnd(1) == n && wallEnd(2) == m+1
-                allowedControls(find((allowedControls(:, 1) > 1) & (allowedControls(:, 2) == 0)), :) = [];, end
-            if wallInit(1) == n-1 && wallEnd(1) == n && wallEnd(2) == m-2
-                allowedControls(find((allowedControls(:, 1) < -1) & (allowedControls(:, 2) == 0)), :) = [];, end
-            if wallInit(2) == m-1 && wallEnd(2) == m && wallEnd(1) == n+1 
-                allowedControls(find((allowedControls(:, 2) > 1) & (allowedControls(:, 1) == 0)), :) = [];, end
-            if wallInit(2) == m-1 && wallEnd(2) == m && wallEnd(1) == n-2 
-                allowedControls(find((allowedControls(:, 2) < -1) & (allowedControls(:, 1) == 0)), :) = [];, end
-
-            % Close walls with corners? 
-            if ((wallInit(2) == m && wallInit(1) == n-1) || (wallEnd(2) == m && wallEnd(1) == n-1))
-                allowedControls(find((allowedControls(:,1) == 1) & (allowedControls(:,2) == -1)), :) = [];, end
-                allowedControls(find((allowedControls(:,1) == 2) & (allowedControls(:,2) == -2)), :) = [];
-
-            if ((wallInit(2) == m && wallInit(1) == n) || (wallEnd(2) == m && wallEnd(1) == n))
-                allowedControls(find((allowedControls(:,1) == 1) & (allowedControls(:,2) == 1)), :) = [];, end
-                allowedControls(find((allowedControls(:,1) == 2) & (allowedControls(:,2) == 2)), :) = [];
-
-            if ((wallInit(2) == m-1 && wallInit(1) == n-1) || (wallEnd(2) == m-1 && wallEnd(1) == n-1))
-                allowedControls(find((allowedControls(:,1) == -1) & (allowedControls(:,2) == -1)), :) = [];, end
-                allowedControls(find((allowedControls(:,1) == -2) & (allowedControls(:,2) == -2)), :) = [];
-
-            if ((wallInit(2) == m-1 && wallInit(1) == n) || (wallEnd(2) == m-1 && wallEnd(1) == n))
-                allowedControls(find((allowedControls(:,1) == -1) & (allowedControls(:,2) == 1)), :) = [];, end
-                allowedControls(find((allowedControls(:,1) == -2) & (allowedControls(:,2) == 2)), :) = [];
-
-            % Check for distant wall corners
-            if ((wallInit(2) == m+1 && wallInit(1) == n-2) || (wallEnd(2) == m+1 && wallEnd(1) == n-2))
-                allowedControls(find((allowedControls(:,1) == 2) & (allowedControls(:,2) == -2)), :) = [];, end
-            if ((wallInit(2) == m+1 && wallInit(1) == n+1) || (wallEnd(2) == m+1 && wallEnd(1) == n+1))
-                allowedControls(find((allowedControls(:,1) == 2) & (allowedControls(:,2) == 2)), :) = [];, end
-            if ((wallInit(2) == m-2 && wallInit(1) == n-2) || (wallEnd(2) == m-2 && wallEnd(1) == n-2))
-                allowedControls(find((allowedControls(:,1) == -2) & (allowedControls(:,2) == -2)), :) = [];, end
-            if ((wallInit(2) == m-2 && wallInit(1) == n+1) || (wallEnd(2) == m-2 && wallEnd(1) == n+1))
-                allowedControls(find((allowedControls(:,1) == -2) & (allowedControls(:,2) == 2)), :) = [];, end
+                    if evalInput == u % done!
+                        inputDone = 1;
+                    end
+                    evalInput = evalInput + inputStep; % increment evalInput to move further
+                end
+            end
         end % end of for walls
-        % determined allowed controls
-        % -------------------------------------------------------------------------
+
+        % Wall checking done: determined allowed controls for the current cell
+        % ----------------------------------------------------------------------------------------------------------------
+
+        %fprintf('m = %d \nn = %d \ncell = %d\n', m, n, cell);
+        %allowedControls 
+        holes = [6 2];
 
         % 'Execute' control policy
         for uID = 1:size(allowedControls, 1)
             u = allowedControls(uID, :);
-            target = [m+u(1), n+u(2)];
-            mTarget = target(1);
-            nTarget = target(2);
+            target = [n m] + u;
+            targetCenter = target - 0.5;
+            holeFactor = 1;
 
-            % determine cells in between
-            trajectCells = [];
+            %% HOLE CHECKING 
+            inputStep = sign(u).*min(1, abs(u)); % Same as before, now the minimum increment is 1
 
-            trajectCells(1, :) = target;
-            if u(1) > 1 || u(2) > 1 
-                trajectCells(2, :) = [m + floor(0.5*(mTarget-m)), n + floor(0.5*(nTarget-n))];, end
+            % cellCenter can be reused from the previous algorithm
+            targetReached = 0;
+            inputEval = inputStep;
+            evalInputCell = cellCenter;
 
-            holeFactor = 1; % takes into account the future probabilities that assume the ball did not fall 
-                            % in the hole
-            
-            % check for holes along the way
-            for holeID = 1:size(holes, 1) 
-                hole = fliplr(holes(holeID, :));
-                for trajectCellID  = 1:size(trajectCells, 1) 
-                    if (hole == trajectCells(trajectCellID, :) & u ~= [0 0])
-                        % Update P - looks complicated but really isn't
-                        P(cell, ... % original cell 
-                          (resetCell(1)-1)*M + resetCell(2), ... 
-                          find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) = ... 
-                            P((n-1)*M+m, ...
-                              (resetCell(1)-1)*M + resetCell(2), ...
-                              find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) + holeFactor*p_f;
-                        holeFactor = (1-p_f)*holeFactor; 
-                    end % end of hole check
-                end % end of for through traject
-            end % end of for through holes
-            
-            bounce = 0;
-            for wID = 1:size(disturbanceSpace, 1)
+            while ~targetReached & any(u ~= [0 0])
+                evalInputCell = cellCenter + inputEval; 
+                for holeID = 1:size(holes, 1) 
+                    hole = holes(holeID, :);
+                    holeCenter = hole - 0.5; 
+                        
+                    % Check if there is a hole in the cell
+                    if evalInputCell == holeCenter 
+                        % Update P
+                        [n m] 
+                        u 
+                        P(cell, resetCellID, uID) = P(cell, resetCellID, uID) + holeFactor*p_f;
+                        % Update holefactor
+                        holeFactor = holeFactor*p_f;
+                    end
+                end
+                
+                % Check if we have reached the target
+                if inputEval == u
+                    targetReached = 1;
+                end
+                inputEval = inputEval + inputStep;
+            end
+
+        % ----------------------------------------------------------------------------------------------------------------
+
+            for wID = 1:size(disturbanceSpace, 1) % loop over disturbances
                 w = disturbanceSpace(wID, :);
-                % Check for boundaries
-                if target(1) == 1
-                    if w(1) < 0 bounce = 1;, end
-                end
-                if target(1) == M
-                    if w(1) > 0 bounce = 1;, end
-                end
-                if target(2) == 1
-                    if w(2) < 0 bounce = 1;, end
-                end
-                if target(2) == N 
-                    if w(2) > 0 bounce = 1;, end
-                end
+                bounce = 0; % has to be updated again for each disturbance!
 
-                % Check for walls
+                % Determine whether the current disturbance results in a bounce
                 for wallID = 1:2:size(walls, 1)
                     wallInit = walls(wallID, :);
                     wallEnd = walls(wallID+1, :);
                     wallCenter = wallInit + 0.5*(wallEnd - wallInit);
-                    wallCenter = fliplr(wallCenter);  
-                    disturbanceCenter = target - [0.5 0.5] + 0.5*w;
+                    disturbanceCenter = targetCenter + 0.5*w;
 
-                    % Check for straight walls
-                    if wallCenter == disturbanceCenter
-                        bounce = 1; 
-                    end
-
-                    % Check for cornering walls
-                    if disturbanceCenter == fliplr(wallInit) | disturbanceCenter == fliplr(wallEnd);
+                    if disturbanceCenter == wallCenter ... % collision with wall center (straight movement)
+                      | ismember(disturbanceCenter, wallCorners, 'rows') ... % collision with corners (diagonal movement)
+                      | any(disturbanceCenter == 0) ... % boundaries left and bottom
+                      | any(disturbanceCenter == [N, M]) % boundaries right and top
+                        
                         bounce = 1;
                     end
-                    
-                    % Determine the final cell
-                    if bounce == 1
-                        final = target;
-                    elseif bounce == 0;
-                        final = target + w;
-                    else 
-                        disp('error, something went wrong');
-                    end
-
-                    % Is there a hole in the final cell
-                    finalHole = 0; % 0 if no final hole, 1 if there is, initialize with 0
-                    for holeID = 1:size(holes, 1)
-                        hole = fliplr(holes(holeID, :));
-                        if hole == final finalHole = 1;
-                        end
-                    end
-                end % end of for through walls
-
-                mFinal = final(1);
-                nFinal = final(2);
-                
-                if finalHole == 1            
-                    P(cell, ... % original cell 
-                      (resetCell(1)-1)*M + resetCell(2), ... 
-                      find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) = ... 
-                        P((n-1)*M+m, ...
-                          (resetCell(1)-1)*M + resetCell(2), ...
-                          find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) + p_f*holeFactor*p_d;
-                    holeFactor = holeFactor*(1-p_f);
-                elseif finalHole == 0
-                    P(cell, ... % original cell 
-                      (nFinal-1)*M + mFinal(1), ... 
-                      find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) = ... 
-                        P(cell, ...
-                          (nFinal-1)*M + mFinal, ...
-                          find(controlSpace(:, 1) == u(1) & controlSpace(:, 2) == u(2))) + holeFactor*p_d;
                 end
 
-        end % end of of for through allowed policies
+                % If there is a bounce, the final cell will be the target cell
+                if bounce == 1
+                    final = target;
+                elseif bounce == 0;
+                    final = target + w;
+                end
 
-    end % end of for cells
+                % Is there a hole in the final cell
+                finalHole = 0; % 0 if no final hole, 1 if there is, initialize with 0
+                for holeID = 1:size(holes, 1)
+                    hole = holes(holeID, :);
+                    if hole == final
+                        finalHole = 1;
+                    end
+                end
 
-finalCellIndex = (targetCell(1)-1)*M + targetCell(2);
+                finalID = (final(1)-1)*M + final(2);
 
-for nextCell = 1:numberOfCells 
-   for controlInput = 1:numberOfInputs
-       if nextCell == finalCellIndex 
-           P(finalCellIndex, nextCell, controlInput) = 1;
-       else
-           P(finalCellIndex, nextCell, controlInput) = 0;
+                % Write probabilities
+                if finalHole == 1 & any(w ~= [0 0])            
+                    P(cell, resetCell, uID) = P(cell, resetCell, uID) + holeFactor*p_f*p_d; 
+                    P(cell, finalID, uID) = P(cell, finalID, uID) + holeFactor*(1-p_f)*p_d; 
+                elseif finalHole == 0
+                    P(cell, finalID, uID) = P(cell, finalID, uID) + holeFactor*p_d;
+                end
+
+            end % end of loop through disturbances
+        end % end of loop through allowed policies
+    end % end of loop cells
+
+    % ----------------------------------------------------------------------------------------------------------------
+
+    %% Overwrite the probability matrix starting from the terminal state (targetCell)
+    for nextCell = 1:numberOfCells % for all possible destination cells
+       for controlInput = 1:numberOfInputs % for all possible control inputs
+           if nextCell == terminalStateID % probability of staying in the terminal state = 1
+               P(terminalStateID, nextCell, controlInput) = 1;
+           else
+               P(terminalStateID, nextCell, controlInput) = 0; % all other probabilities are 0
+           end
        end
-   end
-end   
+    end   
 
-% ------------------------------------- EO EMIEL'S CODE -----------------------------------------
+% ------------------------------------- EO EMIEL'S CODE -------------------------------------------------------------
 end % end of function
-
