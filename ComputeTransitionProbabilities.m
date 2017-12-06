@@ -134,11 +134,11 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
 
         %fprintf('m = %d \nn = %d \ncell = %d\n', m, n, cell);
         %allowedControls 
-        holes = [6 2];
 
         % 'Execute' control policy
         for uID = 1:size(allowedControls, 1)
             u = allowedControls(uID, :);
+            controlSpaceID = find(controlSpace(:,1)==u(1) & controlSpace(:,2)==u(2));
             target = [n m] + u;
             targetCenter = target - 0.5;
             holeFactor = 1;
@@ -160,9 +160,7 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
                     % Check if there is a hole in the cell
                     if evalInputCell == holeCenter 
                         % Update P
-                        [n m] 
-                        u 
-                        P(cell, resetCellID, uID) = P(cell, resetCellID, uID) + holeFactor*p_f;
+                        P(cell, resetCellID, controlSpaceID) = P(cell, resetCellID, controlSpaceID) + holeFactor*p_f;
                         % Update holefactor
                         holeFactor = holeFactor*p_f;
                     end
@@ -217,8 +215,8 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
 
                 % Write probabilities
                 if finalHole == 1 & any(w ~= [0 0])            
-                    P(cell, resetCell, uID) = P(cell, resetCell, uID) + holeFactor*p_f*p_d; 
-                    P(cell, finalID, uID) = P(cell, finalID, uID) + holeFactor*(1-p_f)*p_d; 
+                    P(cell, resetCell, uID) = P(cell, resetCell, controlSpaceID) + holeFactor*p_f*p_d; 
+                    P(cell, finalID, uID) = P(cell, finalID, controlSpaceID) + holeFactor*(1-p_f)*p_d; 
                 elseif finalHole == 0
                     P(cell, finalID, uID) = P(cell, finalID, uID) + holeFactor*p_d;
                 end
