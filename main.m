@@ -100,21 +100,21 @@ figH = PlotMaze( 2, mazeSize, walls, targetCell, holes, resetCell, stateSpace, .
 figure(figH);
 title(strcat('Value iteration (width=', num2str(mazeSize(1)), ', height=', num2str(mazeSize(2)), ')'));
 
-%% PI
-[ J_opt_pi, u_opt_ind_pi ] = PolicyIteration( P, G );
+%%% PI
+%[ J_opt_pi, u_opt_ind_pi ] = PolicyIteration( P, G );
 
-figH = PlotMaze( 3, mazeSize, walls, targetCell, holes, resetCell, stateSpace, ...
-    controlSpace, J_opt_pi, u_opt_ind_pi );
-figure(figH);
-title(strcat('Policy iteration (width=', num2str(mazeSize(1)), ', height=', num2str(mazeSize(2)), ')'));
+%figH = PlotMaze( 3, mazeSize, walls, targetCell, holes, resetCell, stateSpace, ...
+%    controlSpace, J_opt_pi, u_opt_ind_pi );
+%figure(figH);
+%title(strcat('Policy iteration (width=', num2str(mazeSize(1)), ', height=', num2str(mazeSize(2)), ')'));
 
-%% LP
-[ J_opt_lp, u_opt_ind_lp ] = LinearProgramming( P, G );
+%%% LP
+%[ J_opt_lp, u_opt_ind_lp ] = LinearProgramming( P, G );
 
-figH = PlotMaze( 4, mazeSize, walls, targetCell, holes, resetCell, stateSpace, ...
-    controlSpace, J_opt_lp, u_opt_ind_lp );
-figure(figH);
-title(strcat('Linear programming (width=', num2str(mazeSize(1)), ', height=', num2str(mazeSize(2)), ')'));
+%figH = PlotMaze( 4, mazeSize, walls, targetCell, holes, resetCell, stateSpace, ...
+%    controlSpace, J_opt_lp, u_opt_ind_lp );
+%figure(figH);
+%title(strcat('Linear programming (width=', num2str(mazeSize(1)), ', height=', num2str(mazeSize(2)), ')'));
 
 %% display that terminated
 disp('terminated');

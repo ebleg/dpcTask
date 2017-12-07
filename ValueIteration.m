@@ -72,7 +72,7 @@ function [ J_opt, u_opt_ind ] = ValueIteration( P, G )
         end
     end
 
-    fprintf('Algorithm converged after %d iterations!\n', numOfIt);
+    fprintf('\nAlgorithm converged after %d iterations!\n\n', numOfIt);
 
     J_opt = J';
     u_opt_ind = uOpt';
