@@ -113,6 +113,13 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
                       | any(evalInputIntersect == [N, M]) % boundaries right and top
 
                         allowedControls(allowedControls(:,1) == u(1) & allowedControls(:,2) == u(2), :) = []; 
+
+                        % SET G = Inf FOR INFEASIBLE MOVES #########################################################
+                        % ##########################################################################################
+                            G(cell, uID) = Inf;
+                        % ##########################################################################################
+                        % ##########################################################################################
+                        
                             % remove control input from allowedControls space
                         collision = 1; % we don't have to evaluate the current input anymore, it already failed
                     end
@@ -243,7 +250,7 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
 
     % OVERWRITE COSTS FOR TERMINAL STATE #################################################################
     % ####################################################################################################
-        G(terminalStateID, :) = G(terminalStateID, :).*0;
+        G(terminalStateID, :) = zeros(1, size(G,2));
     % ####################################################################################################
     % ####################################################################################################
 

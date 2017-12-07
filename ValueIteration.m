@@ -31,6 +31,52 @@ function [ J_opt, u_opt_ind ] = ValueIteration( P, G )
 %       	inputs for each element of the state space.
 
 % put your code here
+    
+% --------------------------------- EMIEL'S CODE ---------------------------------
 
+    numberOfCells = size(P, 1);
+    numberOfInputs = size(P, 3);
+    
+    tres = 1e-20; % is this specified?
+
+    %% INITIALIZE MATRICES
+    J = zeros(numberOfCells, 1); % 1 x MN for the optimal cost-to-go, final cost 0??
+    costToGo = zeros(numberOfCells, 1);
+    uOpt = zeros(numberOfCells, 1); % 1 x MN for the indices of the optimal 
+                                    % control inputs, note that the indices
+                                    % can never be zero, therefore this 
+                                    % initializations allows for checking.
+
+    %% SOME VARIABLES
+    numOfIt = 0;
+    numOfItMax = 1000;
+    converged = 0;
+
+    %% VALUE ITERATION
+    while ~converged
+
+        numOfIt = numOfIt + 1; % increment iterations
+        parSum = zeros(numberOfCells, numberOfInputs);
+
+        for destCell = 1:numberOfCells
+            parSum = parSum + squeeze(P(:,destCell,:)).*costToGo(destCell);
+        end
+
+        [costToGo, uOpt] = min(G + parSum, [], 2);
+        
+        if max(max(abs(J-costToGo))) < tres || numOfIt >= numOfItMax 
+            converged = 1;
+            J = costToGo;
+        else
+            J = costToGo;
+        end
+    end
+
+    fprintf('Algorithm converged after %d iterations!\n', numOfIt);
+
+    J_opt = J';
+    u_opt_ind = uOpt';
+
+% ------------------------------- EO EMIEL'S CODE --------------------------------
 end
 
