@@ -1,5 +1,5 @@
 function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize, walls, targetCell, holes, resetCell, p_f )
-%COMPUTETRANSITIONPROBABILITIES Compute transition probabilities.
+% COMPUTETRANSITIONPROBABILITIES Compute transition probabilities.
 % 	Compute the transition probabilities between all states in the state
 %   space for all attainable control inputs.
 %
@@ -240,15 +240,15 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
        end
     end   
     
-%  for x = 1:numberOfCells
-%        for u = 1:numberOfInputs
-%          if ((sum(P(x,:,u)) ~= 0) && (abs(sum(P(x,:,u)) - 1) > 0.0001))
-%             x
-%             u
-%             sum(P(x,:,u))
-%          end
-%      end
-%  end
+   for x = 1:numberOfCells
+         for u = 1:numberOfInputs
+           if ((sum(P(x,:,u)) ~= 0) && (abs(sum(P(x,:,u)) - 1) > 0.0001))
+              x
+              u
+              sum(P(x,:,u))
+           end
+       end
+   end
              
          
 
