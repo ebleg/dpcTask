@@ -1,11 +1,12 @@
-function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targetCell, holes, resetCell, p_f, c_p, c_r )
-%COMPUTESTAGECOSTS Compute stage costs.
-% 	Compute the stage costs for all states in the state space for all
-%   attainable control inputs.
+function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize, walls, targetCell, holes, resetCell, p_f )
+%COMPUTETRANSITIONPROBABILITIES Compute transition probabilities.
+% 	Compute the transition probabilities between all states in the state
+%   space for all attainable control inputs.
 %
-%   G = ComputeStageCosts(stateSpace, controlSpace, disturbanceSpace,
-%   mazeSize, walls, targetCell) computes the stage costs for all states in
-%   the state space for all attainable control inputs.
+%   P = ComputeTransitionProbabilities(stateSpace, controlSpace,
+%   disturbanceSpace, mazeSize, walls, targetCell) computes the transition
+%   probabilities between all states in the state space for all attainable
+%   control inputs.
 %
 %   Input arguments:
 %
@@ -30,6 +31,7 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
 %    	targetCell:
 %          	A (2 x 1) matrix describing the position of the target cell in
 %         	the maze.
+%       
 %       holes:
 %         	A (H x 2) matrix containg the H holes of the maze. Each row
 %         	represents the position of a hole.
@@ -41,31 +43,35 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
 %       p_f:
 %           The probability of falling into a hole when the ball is
 %           traversing through or to a cell with a hole
-%       
-%       c_p:
-%           Every time the ball bounces into a wall or boundary, we get this number 
-%            of time steps as penalty.
-%       c_r:
-%           Every time the ball falls into a hole, the ball is set to the reset cell
-%           at the beginning of the next stage and we get this number of time steps
-%           as additional penalty.
 %
 %   Output arguments:
 %
-%       G:
-%           A (MN x L) matrix containing the stage costs of all states in
-%           the state space for all attainable control inputs. The entry
-%           G(i, l) represents the cost if we are in state i and apply
-%           control input l.
+%       P:
+%           A (MN x MN x L) matrix containing the transition probabilities
+%           between all states in the state space for all attainable
+%           control inputs. The entry P(i, j, l) represents the transition
+%           probability from state i to state j if control input l is
+%           applied.
 
 % put your code here
+
+% ---------------------------- EMIEL'S CODE ----------------------------------
 
     M = mazeSize(2); % maze height
     N = mazeSize(1); % maze width
     numberOfCells = M*N; % obvious variable to improve code readability
     numberOfInputs = size(controlSpace, 1); % number of theoretically possible control inputs
+    holes(end+1,:) = [1 1];
 
+    resetCellID = (resetCell(1)-1)*M + resetCell(2);
     terminalStateID = (targetCell(1)-1)*M + targetCell(2); % what the TA's call target cell
+
+    % Initialize probability matrix
+    P = zeros(numberOfCells, numberOfCells, numberOfInputs);
+        % P(i, j, u):
+        %   i = initial state
+        %   j = final state
+        %   u = applied control input
     
     disturbanceSpace = [];
     for i=-1:1 
@@ -77,7 +83,6 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
 
     for cell = 1:numberOfCells 
         % Determine n and k for this cell (CHECK!)
-
         n = ceil(cell/M); % ceil(.): round to the next integer (1-based indexing)
         m = cell - (n-1)*M; % the only reason why this is complicated is because 1-based indexing is stupid
 
@@ -128,16 +133,11 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
         % Wall checking done: determined allowed controls for the current cell
         % ----------------------------------------------------------------------------------------------------------------
 
+        %fprintf('m = %d \nn = %d \ncell = %d\n', m, n, cell);
+        %allowedControls 
+
         % 'Execute' control policy
         for uID = 1:size(allowedControls, 1)
-
-            % RESET PROBABILITIES FOR EVERY NEW CONTROL LOOP #######################################################
-            % ######################################################################################################
-                probReset= 0; 
-                probBounce = 0;
-            % ######################################################################################################
-            % ######################################################################################################
-
             u = allowedControls(uID, :);
             controlSpaceID = find(controlSpace(:,1)==u(1) & controlSpace(:,2)==u(2));
             target = [n m] + u;
@@ -160,14 +160,10 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
                         
                     % Check if there is a hole in the cell
                     if evalInputCell == holeCenter 
-         
-                        % RESET PROBABILITIES FOR EVERY NEW CONTROL LOOP ########################################
-                        % #######################################################################################
-                            probReset = probReset + holeFactor*p_f; 
-                        % #######################################################################################
-                        % #######################################################################################
-
-                        holeFactor = holeFactor*(1-p_f); % Update holefactor
+                        % Update P
+                        P(cell, resetCellID, controlSpaceID) = P(cell, resetCellID, controlSpaceID) + holeFactor*p_f;
+                        % Update holefactor
+                        holeFactor = holeFactor*(1-p_f);
                     end
                 end
                 
@@ -203,49 +199,59 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
                 % If there is a bounce, the final cell will be the target cell
                 if bounce == 1
                     final = target;
-
-                    % ADD BOUNCE PROB TO PROBBOUNCE #########################################################
-                    % #######################################################################################
-                        probBounce = probBounce + p_d;
-                    % #######################################################################################
-                    % #######################################################################################
-
                 elseif bounce == 0;
                     final = target + w;
                 end
+                
 
                 % Is there a hole in the final cell
                 finalHole = 0; % 0 if no final hole, 1 if there is, initialize with 0
                 for holeID = 1:size(holes, 1)
                     hole = holes(holeID, :);
-                    if all(hole == final) && any(w ~= [0 0])
-
-                        % INCLUDE FINAL HOLE IN PROBRESET ##################################################
-                        % ##################################################################################
-                            probReset = probReset + holeFactor*p_d*p_f;
-                        % ##################################################################################
-                        % ##################################################################################
-
+                    if hole == final
+                        finalHole = 1;
                     end
                 end
+
+                finalID = (final(1)-1)*M + final(2);
+
+
+                % Write probabilities
+                if finalHole == 1 && any(w ~= [0 0]) 
+                    P(cell, resetCellID, controlSpaceID) = P(cell, resetCellID, controlSpaceID) + holeFactor*p_f*p_d; 
+                    P(cell, finalID, controlSpaceID) = P(cell, finalID, controlSpaceID) + holeFactor*(1-p_f)*p_d; 
+                else 
+                    P(cell, finalID, controlSpaceID) = P(cell, finalID, controlSpaceID) + holeFactor*p_d;
+                end
+
             end % end of loop through disturbances
-
-            % AFTER ALL DISTURBANCE ITERATIONS WRITE G ####################################################
-            % #############################################################################################
-                G(cell, controlSpaceID) = 1 + ... % time penalty
-                                          probReset*c_r + ... % reset penalty: both for final hole as holes along the way
-                                          holeFactor*probBounce*c_p; % bouncing probability
-            % #############################################################################################
-            % #############################################################################################
-
         end % end of loop through allowed policies
     end % end of loop cells
 
-    % OVERWRITE COSTS FOR TERMINAL STATE #################################################################
-    % ####################################################################################################
-        G(terminalStateID, :) = G(terminalStateID, :).*0;
-    % ####################################################################################################
-    % ####################################################################################################
+    % ----------------------------------------------------------------------------------------------------------------
+
+    %% Overwrite the probability matrix starting from the terminal state (targetCell)
+    for nextCell = 1:numberOfCells % for all possible destination cells
+       for controlInput = 1:numberOfInputs % for all possible control inputs
+           if nextCell == terminalStateID % probability of staying in the terminal state = 1
+               P(terminalStateID, nextCell, controlInput) = 1;
+           else
+               P(terminalStateID, nextCell, controlInput) = 0; % all other probabilities are 0
+           end
+       end
+    end   
+    
+%  for x = 1:numberOfCells
+%      for u = 1:numberOfInputs
+%          if ((sum(P(x,:,u)) ~= 0) && (abs(sum(P(x,:,u)) - 1) > 0.0001))
+%             x
+%             u
+%             sum(P(x,:,u))
+%          end
+%      end
+%  end
+%             
+         
 
 % ------------------------------------- EO EMIEL'S CODE -------------------------------------------------------------
 end % end of function

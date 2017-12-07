@@ -89,7 +89,7 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
         allowedControls = controlSpace; % start with empty 'allowedControls'
 
         %% WALL CHECKING FOR ALLOWED CONTROLS
-        for wallID = 1:2:size(walls, 1); % Loop through all the walls       
+        for wallID = 1:2:size(walls, 1) % Loop through all the walls       
             wallInit = walls(wallID, :); % First wall corner 
             wallEnd = walls(wallID+1, :);  % Second wall corner
             wallCenter = wallInit + 0.5*(wallEnd - wallInit); % Center of the wall
@@ -162,7 +162,7 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
                         % Update P
                         P(cell, resetCellID, controlSpaceID) = P(cell, resetCellID, controlSpaceID) + holeFactor*p_f;
                         % Update holefactor
-                        holeFactor = holeFactor*p_f;
+                        holeFactor = holeFactor*(1-p_f);
                     end
                 end
                 
@@ -201,6 +201,7 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
                 elseif bounce == 0;
                     final = target + w;
                 end
+                
 
                 % Is there a hole in the final cell
                 finalHole = 0; % 0 if no final hole, 1 if there is, initialize with 0
@@ -213,12 +214,13 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
 
                 finalID = (final(1)-1)*M + final(2);
 
+
                 % Write probabilities
-                if finalHole == 1 & any(w ~= [0 0])            
-                    P(cell, resetCell, uID) = P(cell, resetCell, controlSpaceID) + holeFactor*p_f*p_d; 
-                    P(cell, finalID, uID) = P(cell, finalID, controlSpaceID) + holeFactor*(1-p_f)*p_d; 
-                elseif finalHole == 0
-                    P(cell, finalID, uID) = P(cell, finalID, uID) + holeFactor*p_d;
+                if finalHole == 1 && any(w ~= [0 0]) 
+                    P(cell, resetCellID, controlSpaceID) = P(cell, resetCellID, controlSpaceID) + holeFactor*p_f*p_d; 
+                    P(cell, finalID, controlSpaceID) = P(cell, finalID, controlSpaceID) + holeFactor*(1-p_f)*p_d; 
+                else 
+                    P(cell, finalID, controlSpaceID) = P(cell, finalID, controlSpaceID) + holeFactor*p_d;
                 end
 
             end % end of loop through disturbances
@@ -237,6 +239,18 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
            end
        end
     end   
+    
+%  for x = 1:numberOfCells
+%        for u = 1:numberOfInputs
+%          if ((sum(P(x,:,u)) ~= 0) && (abs(sum(P(x,:,u)) - 1) > 0.0001))
+%             x
+%             u
+%             sum(P(x,:,u))
+%          end
+%      end
+%  end
+             
+         
 
 % ------------------------------------- EO EMIEL'S CODE -------------------------------------------------------------
 end % end of function

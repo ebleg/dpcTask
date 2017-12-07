@@ -43,6 +43,7 @@ else
     load('pregeneratedMaze.mat');
     % In order to save time we can just load a pre-generated maze.
 end
+holes(end+1,:) = [1 1];
 
 PlotMaze( 1, mazeSize, walls, targetCell, holes, resetCell );
 
