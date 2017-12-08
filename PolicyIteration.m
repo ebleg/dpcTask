@@ -31,6 +31,52 @@ function [ J_opt, u_opt_ind ] = PolicyIteration( P, G )
 %       	inputs for each element of the state space.
 
 % put your code here
+%% INITIALIZE
+   numberOfCells = size(P, 1);
+   numberOfInputs = size(P, 3);
+   controlSpaceID = 1:numberOfInputs;
+   
+   uOpt = ones(numberOfCells, 1);
+   J = zeros(numberOfCells);
+   
+   converged = 0;
+   maxIt = 1000;
+   it = 0;
+   
+   while ~converged
+       it = it + 1;
+      % Evaluation
+      for i=1:numberOfCells
+          parSum = zeros(numberOfCells, 1);
+          for j=1:numberOfCells
+            parSum(i) = P(i, j, uOpt(i)).*J(j) + parSum(i);
+          end
 
+          J(i) = G(i, uOpt(i)) + parSum(i);
+      end
+      
+      % Improvement
+      for i=1:numberOfCells
+          parSum2 = zeros(numberOfCells, numberOfInputs);
+          for j=1:numberOfCells
+              parSum2(i,:) = squeeze(P(i, j, controlSpaceID))'.*J(j) + parSum2(i,:);
+          end
+          
+          [JUpdate(i), uOpt(i)] = min(G(i, controlSpaceID) + parSum2(i,:));
+          
+      end
+      
+      if (abs(max(max((JUpdate - J))) < 1e-5) || it > maxIt)
+          converged = 1;
+      end
+      
+      J = JUpdate;
+   end
+   
+   J_opt = J';
+   u_opt_ind = uOpt';
+   
+   fprintf('Policy iteration terminated after %d iterations', it);
+      
 end
 
