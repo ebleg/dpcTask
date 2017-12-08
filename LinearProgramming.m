@@ -31,6 +31,30 @@ function [ J_opt, u_opt_ind ] = LinearProgramming( P, G )
 %       	inputs for each element of the state space.
 
 % put your code here
+    
+    numberOfInputs = size(G, 2);   
+    numberOfCells = size(G, 1);
 
+    f = -ones(numberOfCells, 1);
+
+    b = [];
+    A = [];
+
+    for u = 1:numberOfInputs
+        for i = 1:numberOfCells
+            if G(i, u) ~= Inf
+                b = [b; G(i, u)];
+                vec = zeros(1, numberOfCells);
+                vec(i) = 1;
+                A = [A; vec - squeeze(P(i,:,u))];
+            end
+        end
+    end
+      
+    x = linprog(f, A, b);
+    x
+    
+        
+    
 end
 

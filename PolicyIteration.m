@@ -76,7 +76,7 @@ function [ J_opt, u_opt_ind ] = PolicyIteration( P, G )
    J_opt = J';
    u_opt_ind = uOpt';
    
-   fprintf('Policy iteration terminated after %d iterations', it);
+   fprintf('Policy iteration terminated after %d iterations!\n', it);
       
 end
 
