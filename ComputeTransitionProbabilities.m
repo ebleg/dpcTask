@@ -201,7 +201,6 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
                 elseif bounce == 0;
                     final = target + w;
                 end
-                
 
                 % Is there a hole in the final cell
                 finalHole = 0; % 0 if no final hole, 1 if there is, initialize with 0
@@ -250,7 +249,5 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
        end
    end
              
-         
-
 % ------------------------------------- EO EMIEL'S CODE -------------------------------------------------------------
 end % end of function

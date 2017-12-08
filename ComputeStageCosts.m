@@ -247,8 +247,7 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
 
         end % end of loop through allowed policies
     end % end of loop cells
-
-    % OVERWRITE COSTS FOR TERMINAL STATE #################################################################
+% OVERWRITE COSTS FOR TERMINAL STATE #################################################################
     % ####################################################################################################
         G(terminalStateID, :) = zeros(1, size(G,2));
     % ####################################################################################################
