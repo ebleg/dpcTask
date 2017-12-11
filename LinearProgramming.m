@@ -84,12 +84,19 @@ function [ J_opt, u_opt_ind ] = LinearProgramming( P, G )
     % Find optimal control policy 
     u_opt = 5*ones(numberOfInputs, 1);
 
-    
+    tres = 1e-5
 
-    
-    
-    
-    J_opt = [];
-    u_opt_ind = [];
+    % Check for constraints
+    for i = 1:numberOfCells
+        for u = 1:numberOfInputs
+            constraint = G(i, u) + squeeze(P(i, :, u))*J;
+            if constraint - J(i) < tres
+                u_opt(i) = u;
+            end
+        end
+    end
+ 
+    J_opt = J;
+    u_opt_ind = u_opt;
 end
 
