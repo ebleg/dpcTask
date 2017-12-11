@@ -32,61 +32,47 @@ function [ J_opt, u_opt_ind ] = LinearProgramming( P, G )
 
 % put your code here
     
-    % Some useful variables
     numberOfInputs = size(G, 2);   
     numberOfCells = size(G, 1);
     
-    % Initialize f (- for minimize)
-    f = -ones(numberOfCells-1, 1);
+    f = -1*ones(numberOfCells-1);
     
     % Identify terminal state
     for i = 1:numberOfCells
-        if all(G(i,:) < 10e-2)
+        if all(G(i,:) < 10e-5)
             terminalStateID = i;
         end
     end
     
-    % Set up b
     b = G;
     b(terminalStateID,:) = [];
     b = reshape(b, numberOfInputs*(numberOfCells-1), 1);
-    b(b==Inf) = 1e10;
+    size(b)
+    b(b==Inf) = 1e5;
     
-    % Set up b
     A = zeros((numberOfCells-1)*numberOfInputs, numberOfCells-1);
     
-    cellRange = 1:numberOfCells;
-    cellRange(terminalStateID) = [];
-
-    % Combine right elements of P
-    for i = cellRange
+    for i = 1:numberOfCells-1
         for u = 1:numberOfInputs
-            for j = cellRange
-                Ai = find(cellRange==i);
-                Aj = find(cellRange==j);
-                A((numberOfCells-1)*(u-1) + Ai, Aj) = -P(i, j, u);
+            for j = 1:numberOfCells
+                if i ~= terminalStateID && j ~= terminalStateID
+                    A((numberOfCells-1)*u + i, j) = -P(i, j, u);
+                end
             end
         end
     end
-
-    % Take I into account
-    for i = 1:length(cellRange)
+            
+    for i = 1:numberOfCells
         for u = 1:numberOfInputs
-            A((numberOfCells-1)*(u-1) + i, i) = 1 + A((numberOfCells-1)*(u-1) + i, i); 
+            if i ~= terminalStateID
+                A((numberOfCells-1)*u + i, :) = 1 + A((numberOfCells-1)*u + i, :);
+            end
         end
     end
-
-    J = linprog(f, A, b);
-
-    % Insert terminal state in J_opt
-    J = [J(1:(terminalStateID-1)); 0; J(terminalStateID:end)];
     
-    % Find optimal control policy 
-    u_opt = 5*ones(numberOfInputs, 1);
-
+    size(A)
     
-
-    
+    J_opt = linprog(f, A, b);
     
     
     J_opt = [];

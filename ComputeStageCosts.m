@@ -112,7 +112,7 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
                       | any(evalInputIntersect == 0) ... % boundaries left and bottom
                       | any(evalInputIntersect == [N, M]) % boundaries right and top
 
-                        allowedControls(allowedControls(:,1) == u(1) & allowedControls(:,2) == u(2), :) = []; 
+                  allowedControls(allowedControls(:,1) == u(1) & allowedControls(:,2) == u(2), :) = []; 
 
                         % SET G = Inf FOR INFEASIBLE MOVES #########################################################
                         % ##########################################################################################
@@ -196,9 +196,11 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
                     wallInit = walls(wallID, :);
                     wallEnd = walls(wallID+1, :);
                     wallCenter = wallInit + 0.5*(wallEnd - wallInit);
-                    disturbanceCenter = targetCenter + 0.5*w;
+                    wallCorners = [wallInit; wallEnd]; % Vector with the two corners
 
-                    if disturbanceCenter == wallCenter ... % collision with wall center (straight movement)
+                    disturbanceCenter = targetCenter + 0.5*w;
+                    
+               if disturbanceCenter == wallCenter ... % collision with wall center (straight movement)
                       | ismember(disturbanceCenter, wallCorners, 'rows') ... % collision with corners (diagonal movement)
                       | any(disturbanceCenter == 0) ... % boundaries left and bottom
                       | any(disturbanceCenter == [N, M]) % boundaries right and top
@@ -206,6 +208,8 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
                         bounce = 1;
                     end
                 end
+
+                  
 
                 % If there is a bounce, the final cell will be the target cell
                 if bounce == 1
@@ -240,7 +244,7 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
             % AFTER ALL DISTURBANCE ITERATIONS WRITE G ####################################################
             % #############################################################################################
                 G(cell, controlSpaceID) = 1 + ... % time penalty
-                                          probReset*c_r + ... % reset penalty: both for final hole as holes along the way
+                                          probReset*c_r + ...  reset penalty: both for final hole as holes along the way
                                           holeFactor*probBounce*c_p; % bouncing probability
             % #############################################################################################
             % #############################################################################################
@@ -256,3 +260,4 @@ function G = ComputeStageCosts( stateSpace, controlSpace, mazeSize, walls, targe
 
 % ------------------------------------- EO EMIEL'S CODE -------------------------------------------------------------
 end % end of function
+
