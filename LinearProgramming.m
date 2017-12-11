@@ -29,6 +29,7 @@ function [ J_opt, u_opt_ind ] = LinearProgramming( P, G )
 %       	A (K x 1)-matrix containing the index of the optimal control
 %       	input for each element of the state space.
 
+
 %% init
 % because 0*inf = NaN, replace all the infinite costs with 1. Doesn't
 % matter because
@@ -48,8 +49,10 @@ A = zeros( K * L , K );
 
 for i = 1:K
     for l = 1:L
-        A(L*(i-1)+l,:) = -P(i,1:K,l);
-        A(L*(i-1)+l,i) = 1 + A(L*(i-1)+l,i);
+        if i ~= 3
+            A(L*(i-1)+l,:) = -P(i,1:K,l);
+            A(L*(i-1)+l,i) = 1 + A(L*(i-1)+l,i);
+        end
     end
 end
 
