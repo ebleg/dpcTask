@@ -185,6 +185,8 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
                     wallEnd = walls(wallID+1, :);
                     wallCenter = wallInit + 0.5*(wallEnd - wallInit);
                     disturbanceCenter = targetCenter + 0.5*w;
+                    wallCorners = [wallInit; wallEnd]; % Vector with the two corners
+
 
                     if disturbanceCenter == wallCenter ... % collision with wall center (straight movement)
                       | ismember(disturbanceCenter, wallCorners, 'rows') ... % collision with corners (diagonal movement)
