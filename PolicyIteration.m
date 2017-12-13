@@ -35,45 +35,83 @@ function [ J_opt, u_opt_ind ] = PolicyIteration( P, G )
    numberOfCells = size(P, 1);
    numberOfInputs = size(P, 3);
    controlSpaceID = 1:numberOfInputs;
+
    
-   uOpt = ones(numberOfCells, 1);
-   J = zeros(numberOfCells);
+   uOpt = ones(numberOfCells-1, 1);
+   uOptNew = ones(numberOfCells-1, 1);
+   J = zeros(numberOfCells-1);
    
    converged = 0;
    maxIt = 1000;
    it = 0;
+
+   % 2nd approach stuff
+    for i = 1:numberOfCells
+        if all(G(i,:) < 10e-2)
+            terminalStateID = i;
+        end
+    end
+    G(G==Inf) = 10e5; 
+    cellRange = 1:numberOfCells;
+    cellRange(terminalStateID) = [];
    
    while ~converged
        it = it + 1;
-      % Evaluation
-      for i=1:numberOfCells
-          parSum = zeros(numberOfCells, 1);
-          for j=1:numberOfCells
-            parSum(i) = P(i, j, uOpt(i)).*J(j) + parSum(i);
-          end
 
-          J(i) = G(i, uOpt(i)) + parSum(i);
+      % Evaluation (2nd approach);
+      for i = 1:(numberOfCells-1)
+          evali = cellRange(i);
+          Peval(i,:) = reshape(squeeze(P(evali, cellRange, uOpt(i))), 1, numberOfCells-1);
+          Geval(i,:) = G(evali, uOpt(i));
       end
+
+      J = (eye(numberOfCells-1) - Peval)\Geval;
+
+      % Evaluation
+      %for i=1:numberOfCells
+      %    parSum = zeros(numberOfCells, 1);
+      %    for j=1:numberOfCells
+      %          parSum(i) = P(i, j, uOpt(i)).*J(j) + parSum(i);
+      %    end
+
+      %    J(i) = G(i, uOpt(i)) + parSum(i);
+      %end
       
       % Improvement
-      for i=1:numberOfCells
-          parSum2 = zeros(numberOfCells, numberOfInputs);
-          for j=1:numberOfCells
-              parSum2(i,:) = squeeze(P(i, j, controlSpaceID))'.*J(j) + parSum2(i,:);
-          end
+      %for i=1:numberOfCells
+      %    parSum2 = zeros(numberOfCells, numberOfInputs);
+      %    for j=1:numberOfCells
+      %        parSum2(i,:) = squeeze(P(i, j, controlSpaceID))'.*J(j) + parSum2(i,:);
+      %    end
           
-          [JUpdate(i), uOpt(i)] = min(G(i, controlSpaceID) + parSum2(i,:));
+      %    [JUpdate(i), uOpt(i)] = min(G(i, controlSpaceID) + parSum2(i,:));
           
+      %end
+
+      % Improvement (2nd approach)
+      Pimp = P;
+      Pimp(terminalStateID, :, :) = [];
+      Pimp(:, terminalStateID, :) = [];
+      Gimp = G;
+      Gimp(terminalStateID, :) = [];
+
+      for u = 1:numberOfInputs
+          Psliced(:,u) = squeeze(Pimp(:,:, u))*J;
       end
+
+      [~, uOptNew] = min(Gimp + Psliced, [], 2);
       
-      if (abs(max(max((JUpdate - J))) < 1e-50) || it > maxIt)
+      if (abs(max(uOptNew - uOpt)) < 1e-50)
           converged = 1;
       end
-      
-      J = JUpdate;
+
+      uOpt = uOptNew;
+
    end
    
-   J_opt = J';
+   J = [J(1:(terminalStateID-1)); 0; J(terminalStateID:end)];
+   J_opt = J'
+   uOpt = [uOpt(1:(terminalStateID-1)); 1; uOpt(terminalStateID:end)];
    u_opt_ind = uOpt';
    
    fprintf('Policy iteration terminated after %d iterations', it);

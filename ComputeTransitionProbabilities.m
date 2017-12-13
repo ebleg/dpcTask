@@ -252,7 +252,5 @@ function P = ComputeTransitionProbabilities( stateSpace, controlSpace, mazeSize,
        end
    end
              
-         
-
 % ------------------------------------- EO EMIEL'S CODE -------------------------------------------------------------
 end % end of function
