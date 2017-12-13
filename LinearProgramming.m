@@ -96,6 +96,7 @@ function [ J_opt, u_opt_ind ] = LinearProgramming( P, G )
         end
     end
  
+    u_opt(terminalStateID) = 1;
     J_opt = J;
     u_opt_ind = u_opt;
 end

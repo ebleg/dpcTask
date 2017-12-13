@@ -66,7 +66,7 @@ function [ J_opt, u_opt_ind ] = PolicyIteration( P, G )
           
       end
       
-      if (abs(max(max((JUpdate - J))) < 1e-5) || it > maxIt)
+      if (abs(max(max((JUpdate - J))) < 1e-50) || it > maxIt)
           converged = 1;
       end
       

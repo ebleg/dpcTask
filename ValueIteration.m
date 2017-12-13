@@ -37,7 +37,7 @@ function [ J_opt, u_opt_ind ] = ValueIteration( P, G )
     numberOfCells = size(P, 1);
     numberOfInputs = size(P, 3);
     
-    tres = 1e-20; % is this specified?
+    tres = 1e-50; % is this specified?
 
     %% INITIALIZE MATRICES
     J = zeros(numberOfCells, 1); % 1 x MN for the optimal cost-to-go, final cost 0??
