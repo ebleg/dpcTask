@@ -110,7 +110,7 @@ function [ J_opt, u_opt_ind ] = PolicyIteration( P, G )
    end
    
    J = [J(1:(terminalStateID-1)); 0; J(terminalStateID:end)];
-   J_opt = J'
+   J_opt = J';
    uOpt = [uOpt(1:(terminalStateID-1)); 1; uOpt(terminalStateID:end)];
    u_opt_ind = uOpt';
    
